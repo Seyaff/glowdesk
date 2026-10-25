@@ -31,6 +31,11 @@ const leadSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+// one lead per chat session (SIY-9); partial so older leads without a sessionId don't collide
+leadSchema.index(
+  { clientId: 1, sessionId: 1 },
+  { unique: true, partialFilterExpression: { sessionId: { $type: 'string' } } }
+);
 
 export const Client = mongoose.model('Client', clientSchema);
 export const Chunk = mongoose.model('Chunk', chunkSchema);

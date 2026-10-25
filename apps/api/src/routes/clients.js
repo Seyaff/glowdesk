@@ -7,10 +7,10 @@ import { config } from '../config.js';
 const r = Router();
 
 // Create a client (or demo) from a website. Ali's demo generator calls this.
-// POST /clients { name, website, slug?, bookingUrl? }
+// POST /clients { name, website, slug?, bookingUrl?, notifyEmail? }
 r.post('/', async (req, res) => {
   try {
-    const { name, website, bookingUrl } = req.body;
+    const { name, website, bookingUrl, notifyEmail } = req.body;
     if (!website) return res.status(400).json({ error: 'website required' });
     const slug =
       req.body.slug ||
@@ -18,7 +18,7 @@ r.post('/', async (req, res) => {
 
     const client = await Client.findOneAndUpdate(
       { slug },
-      { name, website, bookingUrl },
+      { name, website, bookingUrl, ...(notifyEmail !== undefined && { notifyEmail }) },
       { upsert: true, new: true }
     );
     res.json(client);

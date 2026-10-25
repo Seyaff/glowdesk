@@ -8,6 +8,15 @@
   if (!slug) return console.warn('[bx] no client slug');
   const messages = [];
 
+  // One id per browser tab session so the API updates a single lead (SIY-9)
+  let sessionId;
+  try {
+    sessionId = sessionStorage.getItem('bx-session');
+    if (!sessionId) sessionStorage.setItem('bx-session', (sessionId = crypto.randomUUID()));
+  } catch {
+    sessionId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2);
+  }
+
   const color = script.dataset.color || '#111827';
 
   // Render inside a shadow root so host-page CSS (and cosmetic filters / extensions
@@ -67,7 +76,7 @@
       const res = await fetch(API + '/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, messages }),
+        body: JSON.stringify({ slug, sessionId, messages }),
       });
       const data = await res.json();
       pending.textContent = data.reply || 'Sorry, something went wrong.';
