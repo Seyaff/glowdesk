@@ -5,19 +5,39 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Your AI front desk — demo</title>
   <style>
+    :root{--accent:#111827}
     body{margin:0;font-family:system-ui,sans-serif;background:#faf7f5;color:#1f2937}
     .wrap{max-width:640px;margin:0 auto;padding:64px 24px}
     h1{font-size:28px;margin:0 0 12px}
     p{line-height:1.6;color:#4b5563}
-    .hint{margin-top:32px;padding:16px;border-radius:12px;background:#fff;border:1px solid #eee}
+    .hint{margin-top:32px;padding:16px;border-radius:12px;background:#fff;border:1px solid #eee;border-left:4px solid var(--accent)}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Your website's AI front desk</h1>
+    <h1 id="title">Your website's AI front desk</h1>
     <p>This assistant was trained on your website. It answers visitor questions 24/7 and collects leads while your team is busy.</p>
     <div class="hint">👉 Click the chat button in the bottom-right corner and ask about your treatments, pricing or hours.</div>
   </div>
+  <script>
+    // SIY-27: personalize for ?client=<slug>; on any failure keep the generic text
+    (async () => {
+      const slug = new URLSearchParams(location.search).get('client');
+      if (!slug) return;
+      try {
+        const res = await fetch('/clients/' + encodeURIComponent(slug));
+        if (!res.ok) return;
+        const { name, brandColor } = await res.json();
+        if (name) {
+          document.getElementById('title').textContent = 'Built for ' + name;
+          document.title = name + ' — AI front desk demo';
+        }
+        if (brandColor && CSS.supports('color', brandColor)) {
+          document.documentElement.style.setProperty('--accent', brandColor);
+        }
+      } catch {}
+    })();
+  </script>
   <script src="/bx.js" defer></script>
 </body>
 </html>
