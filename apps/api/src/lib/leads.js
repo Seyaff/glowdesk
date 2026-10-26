@@ -80,18 +80,38 @@ export async function captureLead({ client, sessionId, messages }) {
   return lead;
 }
 
+// Email: Brevo HTTP API if BREVO_API_KEY is set (works on Render free, which blocks SMTP ports),
+// otherwise Gmail SMTP (fine locally / on paid hosts). Sender = MAIL_FROM, else GMAIL_USER.
 let transport;
-function mailer() {
-  const { GMAIL_USER: user, GMAIL_APP_PASSWORD: pass } = process.env;
-  if (!user || !pass) return null;
-  transport ||= nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
-  return transport;
+export async function sendMail({ fromName, to, replyTo, subject, text }) {
+  const { BREVO_API_KEY, GMAIL_USER, GMAIL_APP_PASSWORD } = process.env;
+  const from = process.env.MAIL_FROM || GMAIL_USER;
+  if (!from) return 'MAIL_FROM/GMAIL_USER not set';
+
+  if (BREVO_API_KEY) {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { name: fromName, email: from },
+        to: [{ email: to }],
+        ...(replyTo && { replyTo: { email: replyTo } }),
+        subject,
+        textContent: text,
+      }),
+    });
+    if (!res.ok) throw new Error(`Brevo ${res.status}: ${await res.text()}`);
+    return null;
+  }
+
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) return 'no BREVO_API_KEY or GMAIL_USER/GMAIL_APP_PASSWORD set';
+  transport ||= nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD } });
+  await transport.sendMail({ from: `"${fromName}" <${from}>`, to, replyTo, subject, text });
+  return null;
 }
 
 async function notifyClient(client, lead, messages) {
   if (!client.notifyEmail) return console.log(`[lead] ${client.slug}: no notifyEmail set, skipping email`);
-  const t = mailer();
-  if (!t) return console.log('[lead] GMAIL_USER/GMAIL_APP_PASSWORD not set, skipping email');
 
   const convo = messages
     .slice(-10)
@@ -108,12 +128,13 @@ Conversation (last 10 messages):
 
 ${convo}`;
 
-  await t.sendMail({
-    from: `"${client.name || 'Website chat'}" <${process.env.GMAIL_USER}>`,
+  const skipped = await sendMail({
+    fromName: client.name || 'Website chat',
     to: client.notifyEmail,
     replyTo: lead.email || undefined,
     subject: `New lead from your website chat: ${lead.name || 'Unknown'}`,
     text,
   });
+  if (skipped) return console.log(`[lead] ${skipped}, skipping email`);
   console.log(`[lead] emailed ${client.notifyEmail} for lead ${lead._id}`);
 }
