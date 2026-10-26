@@ -3,12 +3,13 @@ import { Client, Chunk } from '../db.js';
 import { crawlSite, chunkText } from '../lib/crawl.js';
 import { embed, useEmbeddings } from '../llm/index.js';
 import { config } from '../config.js';
+import { requireAdmin } from '../lib/auth.js';
 
 const r = Router();
 
 // Create a client (or demo) from a website. Ali's demo generator calls this.
 // POST /clients { name, website, slug?, bookingUrl?, notifyEmail? }
-r.post('/', async (req, res) => {
+r.post('/', requireAdmin, async (req, res) => {
   try {
     const { name, website, bookingUrl, notifyEmail } = req.body;
     if (!website) return res.status(400).json({ error: 'website required' });
@@ -29,7 +30,7 @@ r.post('/', async (req, res) => {
 
 // Crawl + embed the client's site (SIY-6)
 // POST /clients/:slug/ingest
-r.post('/:slug/ingest', async (req, res) => {
+r.post('/:slug/ingest', requireAdmin, async (req, res) => {
   try {
     const client = await Client.findOne({ slug: req.params.slug });
     if (!client) return res.status(404).json({ error: 'client not found' });

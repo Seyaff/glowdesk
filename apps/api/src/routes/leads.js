@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { Client, Lead } from '../db.js';
+import { requireAdmin } from '../lib/auth.js';
 
 const r = Router();
+r.use(requireAdmin); // SIY-26: every /leads endpoint is admin-only (widget saves leads via /chat)
 
 // POST /leads { slug, name, phone, email, service, sessionId }  (SIY-9 builds on this)
 r.post('/', async (req, res) => {

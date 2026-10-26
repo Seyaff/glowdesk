@@ -16,9 +16,15 @@ export const config = {
   },
   vectorSearch: env.VECTOR_SEARCH || 'local',
   crawlMaxPages: Number(env.CRAWL_MAX_PAGES || 25),
+  adminKey: env.ADMIN_KEY,
 };
 
 if (!config.mongoUri) {
   console.error('MONGODB_URI missing. Copy .env.example to .env and fill it in.');
+  process.exit(1);
+}
+
+if (!config.adminKey) {
+  console.error('ADMIN_KEY missing. Set it in .env (a long random string) — admin endpoints require it. Refusing to start.');
   process.exit(1);
 }

@@ -16,28 +16,56 @@ apps/
 3. Install + run:
 ```bash
 npm install
-cp apps/api/.env.example apps/api/.env   # fill in MONGODB_URI + GEMINI_API_KEY
+cp apps/api/.env.example apps/api/.env   # fill in MONGODB_URI + GEMINI_API_KEY + ADMIN_KEY
 npm run dev:api
 ```
 4. Check: `curl http://localhost:4000/health`
 
+## Admin key
+`POST /clients`, `POST /clients/:slug/ingest` and everything under `/leads` need the
+`x-admin-key` header (value = `ADMIN_KEY` from `.env`), otherwise they return `401 {"error":"unauthorized"}`.
+Public (the widget uses them): `POST /chat`, `GET /clients/:slug`, `/health`, `bx.js`, `demo.html`.
+
 ## Make a demo bot for a med spa (end-to-end test)
 
 ```bash
-# 1. create client
-curl -X POST localhost:4000/clients -H "Content-Type: application/json" \
-  -d '{"name":"Glow Med Spa","website":"https://example-medspa.com"}'
+# 1. create client (admin)
+curl -X POST localhost:4000/clients -H "Content-Type: application/json" -H "x-admin-key: YOUR_KEY" \
+  -d '{"name":"Glow Med Spa","website":"https://example-medspa.com","notifyEmail":"owner@example.com"}'
 # → returns slug, e.g. "glow-med-spa"
 
-# 2. crawl + embed their site
-curl -X POST localhost:4000/clients/glow-med-spa/ingest
+# 2. crawl + embed their site (admin)
+curl -X POST localhost:4000/clients/glow-med-spa/ingest -H "x-admin-key: YOUR_KEY"
 
-# 3. chat
+# 3. chat (public, no key)
 curl -X POST localhost:4000/chat -H "Content-Type: application/json" \
   -d '{"slug":"glow-med-spa","messages":[{"role":"user","content":"How much is Botox?"}]}'
 
-# 4. see the widget
+# 4. see leads (admin)
+curl localhost:4000/leads/glow-med-spa -H "x-admin-key: YOUR_KEY"
+
+# 5. see the widget
 open http://localhost:4000/demo.html?client=glow-med-spa
+```
+
+Same in PowerShell (Windows):
+```powershell
+$api = "http://localhost:4000"
+$admin = @{ "x-admin-key" = "YOUR_KEY" }
+
+# 1. create client (admin)
+Invoke-RestMethod -Method Post -Uri "$api/clients" -Headers $admin -ContentType "application/json" `
+  -Body (@{ name = "Glow Med Spa"; website = "https://example-medspa.com"; notifyEmail = "owner@example.com" } | ConvertTo-Json)
+
+# 2. crawl + embed (admin)
+Invoke-RestMethod -Method Post -Uri "$api/clients/glow-med-spa/ingest" -Headers $admin
+
+# 3. chat (public, no key)
+Invoke-RestMethod -Method Post -Uri "$api/chat" -ContentType "application/json" `
+  -Body (@{ slug = "glow-med-spa"; messages = @(@{ role = "user"; content = "How much is Botox?" }) } | ConvertTo-Json -Depth 5)
+
+# 4. see leads (admin)
+Invoke-RestMethod -Uri "$api/leads/glow-med-spa" -Headers $admin
 ```
 
 **Ali's demo generator (SIY-17)** = loop over the lead sheet calling step 1 + 2, then write
