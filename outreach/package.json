@@ -1,0 +1,14 @@
+{
+  "name": "glowdesk-outreach",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "run": "node --env-file=.env pipeline.js",
+    "gmail:auth": "node --env-file=.env gmail-auth.js",
+    "drafts:from-previews": "node --env-file=.env pipeline.js --from-previews",
+    "test": "node --test preview-drafts.test.js"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}

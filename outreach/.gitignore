@@ -1,0 +1,5 @@
+.env
+outreach-state.json
+outreach-state.json.tmp
+outreach-state.json.drafts.lock
+node_modules/
